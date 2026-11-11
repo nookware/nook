@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# nook-tray-menuonly: prints the id of every tray item that can't be opened, only show a menu.
+# Ayatana items (libappindicator: the DNF updater, Steam, …) have no Activate method and don't say
+# so (no ItemIsMenu). Plasma notices the failed call and shows the menu; Quickshell can't see the
+# failure, so the control center asks this which items to treat as menu-only.
+busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+    org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems 2>/dev/null |
+  grep -o '"[^"]*"' | tr -d '"' |
+  while read -r item; do
+    svc=${item%%/*}; path=/${item#*/}
+    [ "$path" = "/$item" ] && path=/StatusNotifierItem          # bare service name
+    busctl --user introspect "$svc" "$path" org.kde.StatusNotifierItem 2>/dev/null | grep -q '^\.Activate ' && continue
+    busctl --user get-property "$svc" "$path" org.kde.StatusNotifierItem Id 2>/dev/null | sed -n 's/^s "\(.*\)"$/\1/p'
+  done
