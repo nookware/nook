@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Print the Nook shortcut cheat-sheet (the same list the wallpaper shows).
-# --window opens it in its own Alacritty.
+# --window opens it in its own kitty.
 share="${XDG_DATA_HOME:-$HOME/.local/share}/nook"
 if [ "${1:-}" = "--window" ]; then
-  exec alacritty --title nook-keys --hold -e "$0"
+  exec kitty --title nook-keys --hold "$0"
 fi
 python3 "$share/shortcuts.py" list "$share/shortcuts.conf"

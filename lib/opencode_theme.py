@@ -70,7 +70,7 @@ def theme(name):
                          "success": {"base": ansi[2]}, "info": {"base": r["focus"]}},
         },
         "background": {
-            # transparent: the terminal's own (kitty / Alacritty / Konsole) Nook background shows through
+            # transparent: the terminal's own (kitty / Konsole) Nook background shows through
             "base": "transparent",
             "raised": {"base": r["bg200"], "high": r["bg300"], "max": r["line"]},
             "action": {

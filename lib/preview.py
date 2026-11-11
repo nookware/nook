@@ -120,7 +120,7 @@ def desktop(kind, pal):
 
 
 SHELL = {
-    "zsh": ("zsh", "zsh in the nook terminals (Alacritty, kitty, Konsole's Nook profile)", "chsh is left alone"),
+    "zsh": ("zsh", "zsh in the nook terminals (kitty, Konsole's Nook profile)", "chsh is left alone"),
     "omz": ("oh-my-zsh", "autosuggestions (grey ghost text) and syntax highlighting in the palette", "git ↹ → git checkout …"),
     "prompt-nook": ("prompt · nook", "two lines from the oh-my-zsh theme", "╭─λ nbax@nook ─ ~/proj ─  main ✓\n ╰─❯"),
     "prompt-starship": ("prompt · starship", "bracketed tags, duration, exit code, time (needs starship)", "╭─[λ nbax@nook]─[~/proj]─[git:main ●2]\n ╰─▶                 took 4s · 14:55"),

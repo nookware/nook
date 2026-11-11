@@ -12,7 +12,7 @@ python3 "$REPO/plasma/shortcuts.py" unbind "$REPO/config/shortcuts.conf" || true
 
 # kwinrulesrc / breezerc / btop.conf etc. that did not exist before get removed, the rest restored.
 for f in kdeglobals kwinrc kwinrulesrc plasmarc konsolerc kscreenlockerrc plasmashellrc \
-         fastfetch/config.jsonc cava/config btop/btop.conf alacritty/alacritty.toml; do
+         fastfetch/config.jsonc cava/config btop/btop.conf; do
   rel=".config/$f"
   if [ -e "$src/$rel" ]; then cp -a "$src/$rel" "$HOME/$rel"
   else rm -f "$HOME/$rel"; fi
