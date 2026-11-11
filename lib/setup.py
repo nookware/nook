@@ -247,7 +247,7 @@ def step_keyboard():
     say("layouts by their xkb code, the first is the default; SUPER K (and the dot in the clock) switches.")
     say(dim("e.g. us · de · eu (EurKEY) · fr · gb · us,de"))
     while True:
-        new = ask("layouts", cur).replace(" ", "")
+        new = ",".join(ask("layouts", cur).replace(",", " ").split())   # "de eu" or "de, eu" too
         bad = [l for l in new.split(",") if not Path(f"/usr/share/X11/xkb/symbols/{l}").is_file()]
         if not bad and re.fullmatch(r"[a-z0-9_]+(,[a-z0-9_]+)*", new): break
         warn(f"unknown: {', '.join(bad) or new}")

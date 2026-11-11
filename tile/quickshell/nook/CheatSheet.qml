@@ -1,17 +1,21 @@
-// Keybind cheatsheet on the wallpaper (bottom layer: under every window, so it shows on
-// any empty workspace). SUPER / toggles it (qs -c nook ipc call cheatsheet toggle).
+// Keybind cheatsheet, two ways:
+//   SUPER / (ipc: cheatsheet peek)   over every window on the focused screen; any key or click closes it
+//   on the wallpaper                 under every window, on any empty workspace; switched in the nook
+//                                    tab (ipc: cheatsheet toggle), kept in shell.json
 //
 // The binds are NOT listed here: they come from `hyprctl binds -j`. Every bind in
 // hypr/nook.lua with a description "group: label" shows up, grouped and coloured.
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 
 Scope {
     id: root
     readonly property bool shown: Settings.shown("desk.cheatsheet")
+    property bool peek: false
     property var groups: []
 
     // two columns, filled row by row: apps | settings, windows | workspaces, system
@@ -21,6 +25,7 @@ Scope {
     IpcHandler {
         target: "cheatsheet"
         function toggle(): void { Settings.toggle("desk.cheatsheet") }
+        function peek(): void { if (!root.peek) binds.running = true; root.peek = !root.peek }
         function reload(): void { binds.running = true }
     }
 
@@ -83,6 +88,80 @@ Scope {
         Text { id: t; anchors.centerIn: parent; color: parent.hue; font.family: Theme.font; font.pixelSize: Theme.label; font.bold: true }
     }
 
+    component Sheet: Rectangle {
+        id: sheet
+        property bool solid: false
+        implicitHeight: body.implicitHeight + 36
+        radius: Theme.radius
+        color: Theme.alpha(Theme.bg000, solid ? 0.94 : 0.55)
+        border.color: Theme.line
+        border.width: 1
+
+        ColumnLayout {
+            id: body
+            anchors { fill: parent; margins: 18 }
+            spacing: 14
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "λ keybinds"; color: Theme.ink; font.family: Theme.pixel; font.pixelSize: 32 }
+                Item { Layout.fillWidth: true }
+                Text { text: "╭─[ hyprland // cheatsheet ]─╮"; color: Theme.faint; font.family: Theme.font; font.pixelSize: Theme.small }
+            }
+
+            GridLayout {
+                columns: 2
+                columnSpacing: 28
+                rowSpacing: 16
+                Layout.fillWidth: true
+                Repeater {
+                    model: root.groups
+                    ColumnLayout {
+                        id: grp
+                        required property var modelData
+                        Layout.alignment: Qt.AlignTop
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        spacing: 5
+                        Text {
+                            text: grp.modelData.name
+                            color: grp.modelData.hue
+                            font.family: Theme.font; font.pixelSize: Theme.label; font.bold: true
+                            font.letterSpacing: 1.2
+                        }
+                        Repeater {
+                            model: grp.modelData.rows
+                            RowLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Repeater {
+                                    model: modelData.keys
+                                    Cap { required property var modelData; text: modelData; hue: grp.modelData.hue }
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignRight
+                                    text: modelData.label
+                                    color: Theme.muted
+                                    elide: Text.ElideRight
+                                    font.family: Theme.font; font.pixelSize: Theme.small
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text {
+                text: sheet.solid ? "from hypr/nook.lua · ⇧ = SHIFT · any key closes"
+                                      : "from hypr/nook.lua · ⇧ = SHIFT · SUPER / shows it over the windows"
+                color: Theme.faint; font.family: Theme.font; font.pixelSize: Theme.label
+            }
+        }
+    }
+
+    // on the wallpaper, every screen
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -96,77 +175,38 @@ Scope {
             anchors { top: true; left: true }
             margins { top: 48; left: 56 }
             implicitWidth: portrait ? 560 : 640
-            implicitHeight: body.implicitHeight + 36
+            implicitHeight: wsheet.implicitHeight
             color: "transparent"
+            Sheet { id: wsheet; anchors.fill: parent }
+        }
+    }
 
-            Rectangle {
+    // SUPER /: over every window on the focused screen, until a key or a click
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            id: over
+            required property var modelData
+            screen: modelData
+            readonly property bool portrait: modelData.height > modelData.width
+            visible: root.peek && root.groups.length > 0 && Hyprland.focusedMonitor?.name === modelData.name
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "nook-cheatsheet"
+            WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: Theme.alpha(Theme.bg000, 0.35)
+            MouseArea { anchors.fill: parent; onClicked: root.peek = false }
+            Item {
                 anchors.fill: parent
-                radius: Theme.radius
-                color: Theme.alpha(Theme.bg000, 0.55)
-                border.color: Theme.line
-                border.width: 1
-
-                ColumnLayout {
-                    id: body
-                    anchors { fill: parent; margins: 18 }
-                    spacing: 14
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text { text: "λ keybinds"; color: Theme.ink; font.family: Theme.pixel; font.pixelSize: 32 }
-                        Item { Layout.fillWidth: true }
-                        Text { text: "╭─[ hyprland // cheatsheet ]─╮"; color: Theme.faint; font.family: Theme.font; font.pixelSize: Theme.small }
-                    }
-
-                    GridLayout {
-                        columns: 2
-                        columnSpacing: 28
-                        rowSpacing: 16
-                        Layout.fillWidth: true
-                        Repeater {
-                            model: root.groups
-                            ColumnLayout {
-                                id: grp
-                                required property var modelData
-                                Layout.alignment: Qt.AlignTop
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1
-                                spacing: 5
-                                Text {
-                                    text: grp.modelData.name
-                                    color: grp.modelData.hue
-                                    font.family: Theme.font; font.pixelSize: Theme.label; font.bold: true
-                                    font.letterSpacing: 1.2
-                                }
-                                Repeater {
-                                    model: grp.modelData.rows
-                                    RowLayout {
-                                        required property var modelData
-                                        Layout.fillWidth: true
-                                        spacing: 4
-                                        Repeater {
-                                            model: modelData.keys
-                                            Cap { required property var modelData; text: modelData; hue: grp.modelData.hue }
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            horizontalAlignment: Text.AlignRight
-                                            text: modelData.label
-                                            color: Theme.muted
-                                            elide: Text.ElideRight
-                                            font.family: Theme.font; font.pixelSize: Theme.small
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Text {
-                        text: "from hypr/nook.lua · ⇧ = SHIFT · toggle with SUPER /"
-                        color: Theme.faint; font.family: Theme.font; font.pixelSize: Theme.label
-                    }
-                }
+                focus: over.visible
+                Keys.onPressed: e => { root.peek = false; e.accepted = true }
+            }
+            Sheet {
+                solid: true
+                anchors.centerIn: parent
+                width: over.portrait ? 560 : 640
+                height: implicitHeight
             }
         }
     }

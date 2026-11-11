@@ -25,6 +25,7 @@ qt6ct	tile.look	1	Qt apps (Dolphin …) in the palette	qt6ct	qt6ct	qt6ct	qt6ct
 grim	tile.tools	1	screenshots (nook-shot, Print)	grim	grim	grim	grim
 slurp	tile.tools	1	pick a region for screenshots	slurp	slurp	slurp	slurp
 wl-clipboard	tile.tools	1	screenshots and the launcher to the clipboard	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard
+dolphin	tile.tools	1	the file manager (SUPER E)	dolphin	dolphin	dolphin	dolphin
 jetbrains-mono	tile.look,plasma	1	JetBrains Mono, the font of everything	jetbrains-mono-fonts-all	fonts-jetbrains-mono	ttf-jetbrains-mono	jetbrains-mono-fonts
 vt323	tile.look,plasma	1	VT323 pixel font for headings (from Google Fonts)	@vt323	@vt323	@vt323	@vt323
 fzf	plasma,shell.fzf	1	the fuzzy finder behind this menu and the shell's Ctrl+R	fzf	fzf	fzf	fzf

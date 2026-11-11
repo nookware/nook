@@ -31,7 +31,8 @@ hl.on("hyprland.start", function()
     -- it unlocks the wallet and serves org.freedesktop.secrets. Plasma runs it itself, but its
     -- autostart entry has X-systemd-skip, so here nobody would, and Nextcloud (started by the
     -- session target) found no keychain and asked for a fresh login every boot.
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP "
+    -- command -p: the system one, not a copy a PATH entry (conda …) may put first
+    hl.exec_cmd("command -p dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP "
         .. "HYPRLAND_INSTANCE_SIGNATURE DISPLAY QT_QPA_PLATFORMTHEME XCURSOR_THEME XCURSOR_SIZE XDG_DATA_DIRS XDG_MENU_PREFIX "
         .. "&& { [ -x /usr/libexec/pam_kwallet_init ] && /usr/libexec/pam_kwallet_init; true; } "
         .. "&& systemctl --user start hyprland-session.target hyprpolkitagent "
@@ -302,7 +303,7 @@ function nook_focus_browser()
     if pick.active and #wins > 1 then pick = wins[#wins] end
     hl.dispatch(hl.dsp.focus({ window = "address:" .. pick.address }))
 end
-bind(M("B"),       function() nook_focus_browser() end, "apps: browser (the open one, or a new one)")
+bind(M("B"),       function() nook_focus_browser() end, "apps: browser (the open one)")
 bind(MS("RETURN"), hl.dsp.exec_cmd(term .. " -e btop"), "apps: btop")
 
 -- windows
@@ -321,7 +322,7 @@ bind(M("mouse:273"), hl.dsp.window.resize(), "windows: drag = resize", { mouse =
 
 -- workspaces
 for n = 1, 9 do
-    bind(M(tostring(n)),  function() nook_show_workspace(n) end, "workspaces: bring " .. n .. " here (trades screens if it's on the other one)")
+    bind(M(tostring(n)),  function() nook_show_workspace(n) end, "workspaces: bring here (swaps screens) " .. n)
     bind(MS(tostring(n)), hl.dsp.window.move({ workspace = n }),  "workspaces: send window to " .. n)
 end
 bind(M("S"),          hl.dsp.workspace.toggle_special("scratch"),         "workspaces: scratchpad")
@@ -336,7 +337,7 @@ bind(MS("W"),    hl.dsp.exec_cmd("nook-shot window"),                           
 bind(MS("A"),    hl.dsp.exec_cmd("nook-shot screen"),                              "system: screenshot screen")
 hl.bind("PRINT",    hl.dsp.exec_cmd("nook-shot area"))
 hl.bind(MS("PRINT"), hl.dsp.exec_cmd("nook-shot screen"))
-bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet toggle"),         "system: this cheatsheet")
+bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet peek"),           "system: this cheatsheet")
 -- kded6 grabs the tray name while qs is down, and tray apps only register once: so stop kded6,
 -- and restart the running autostart apps once the new qs has the tray (bin/nook-autostart)
 bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec qs -c nook"), "system: reload shell")

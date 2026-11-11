@@ -16,7 +16,7 @@ they link to a recoloured copy in `~/.local/share/nook/tile-build`. Re-run the i
 | --- | --- | --- | --- |
 | **Nobara 44+** | COPR `sdegler/hyprland` | Nobara repo | Qt apps fully themed (KDE-aware qt6ct reads `NookRamen.colors`) |
 | **Fedora 44+** | COPR `sdegler/hyprland` | COPR `errornointernet/quickshell` | same as Nobara. Breeze only if KDE is installed, Fusion otherwise |
-| **Ubuntu 26.04+** and distros based on it (Mint, Pop!_OS, Kubuntu …) | PPA `cppiber/hyprland` | apt from 26.10 on; on 26.04 **built from source** (tag `v0.3.2`, a few minutes) | plain qt6ct uses the `NookRamen.conf` palette, so KDE apps' own colour logic doesn't follow |
+| **Ubuntu 26.04+** and distros based on it (Mint, Pop!_OS, Kubuntu …) | PPA `cppiber/hyprland` | apt from 26.10 on; on 26.04 **built from source** (tag `v0.3.2`, a few minutes) | plain qt6ct uses the `nook-tile.conf` palette (`tile/qt/qt6ct.conf`), so KDE apps' own colour logic doesn't follow |
 | Ubuntu 24.04, Debian | ✗ | ✗ | Qt 6.4 is too old (needs 6.9+); no Hyprland 0.57 packages |
 
 The config uses Hyprland's **Lua** format, which is why Hyprland has to be 0.57 or newer.
@@ -68,7 +68,7 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
   - `bt`: bluetooth on/off, scan, devices with connect/disconnect and battery. A new device pairs, gets trusted and connects with one click; `[cancel]` stops pairing, `[forget]` (click twice) removes a paired one.
   - `apps`: the background apps (the tray) as a list. Click opens, right-click opens their menu. Also what's playing.
   - `nook`: what the shell shows, live. Every bar module (λ nook, workspaces, window, clock, cpu · ram, power), every desktop widget, the wallpaper's NOOK banner and dot grid, and the cheatsheet switch on and off with a click. The homelab hosts are added (`name` + `host` or `host:port`, `⏎`), changed (click a row) and removed (`[remove]`, click twice) here, and the weather place is set here. The switches are kept in `~/.config/nook/shell.json` (`Settings.qml`; only what's off is stored), hosts and place in `widgets.conf` (written by `nook-feed set|unset`, comments stay). Also over IPC: `qs -c nook ipc call nook toggle|on|off widget.srv`, `… nook list`.
-- **Cheatsheet** (`CheatSheet.qml`) sits on the wallpaper, under every window. `SUPER /` toggles it.
+- **Cheatsheet** (`CheatSheet.qml`): `SUPER /` shows it over every window on the focused screen (blurred behind); any key or click closes it. It can also sit on the wallpaper, under every window: the `cheatsheet` switch in the nook tab.
   - It reads the binds from `hyprctl binds -j`. Every bind in `nook.lua` with a description
     `"group: label"` shows up there, so `nook.lua` is the only list of keys.
   - Group colours: APPS amber, SETTINGS aqua (control center, net, bluetooth, keyboard), WINDOWS cyan, WORKSPACES blue, SYSTEM red.

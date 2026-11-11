@@ -1,0 +1,8 @@
+# nook-tile: Flatpak apps (Blip, Discord …) ask for the IBus portal when they start. Without a
+# running ibus-daemon (Hyprland doesn't start one) ibus-portal exits with an error, and Fedora's
+# fumon then shows "Failed unit detected" after every login. This user-level copy of
+# /usr/share/dbus-1/services/org.freedesktop.portal.IBus.service runs the portal only when IBus
+# is there and otherwise ends cleanly; the app falls back to its own input as before.
+[D-BUS Service]
+Name=org.freedesktop.portal.IBus
+Exec=/bin/sh -c 'pgrep -u "$(id -u)" -x ibus-daemon >/dev/null && exec /usr/libexec/ibus-portal; exit 0'

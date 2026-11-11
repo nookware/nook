@@ -329,6 +329,9 @@ NoDisplay=true
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=1
 DESKTOP
+  # the IBus portal only where IBus runs, so Flatpak apps don't leave a failed unit behind
+  [ -f /usr/share/dbus-1/services/org.freedesktop.portal.IBus.service ] \
+    && link "$TILE/dbus/org.freedesktop.portal.IBus.service" "$XDG_DATA_HOME/dbus-1/services/org.freedesktop.portal.IBus.service"
   # graphical-session.target for the portal (Hyprland without uwsm does not start it)
   link "$TSRC/systemd/hyprland-session.target" "$CFG/systemd/user/hyprland-session.target"
   systemctl --user daemon-reload 2>/dev/null || true
