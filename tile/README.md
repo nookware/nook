@@ -88,6 +88,13 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
 
 Apps in `~/.config/autostart` and `/etc/xdg/autostart` (Blip, KDE Connect …) run like under Plasma, through systemd's XDG autostart generator, which honours `OnlyShowIn`/`NotShowIn`. They start only once Quickshell owns the tray (`bin/nook-autostart start`), because tray apps register their icon once, when they start. `SUPER ⇧ R` restarts the running ones after the shell (`nook-autostart restart`), so their icons come back. `nook.lua` also puts `~/.local/bin` on the session's PATH, which the nook helpers (`nook-shot`, `nook-gamemode` …) need.
 
+## If the shell crashes
+
+Quickshell runs under `bin/nook-shell`, which starts it again within a second when it crashes
+and shows a notification. A stop on purpose (`SUPER ⇧ R`, logout) ends it too. Quickshell keeps
+its logs in RAM, so the crashed run's output is saved to `~/.local/state/nook/shell-crash-<time>.log`
+first, where it survives a reboot. After five crashes in a minute it gives up and says so.
+
 ## Screen sharing
 
 It goes through `xdg-desktop-portal-hyprland` (the picker appears when an app asks). Two things keep it working:

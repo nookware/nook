@@ -175,6 +175,7 @@ if on shell; then
   link "$TILE/bin/nook-feed"           "$HOME/.local/bin/nook-feed"
   link "$TILE/bin/nook-wired"          "$HOME/.local/bin/nook-wired"
   link "$TILE/bin/nook-autostart"      "$HOME/.local/bin/nook-autostart"
+  link "$TILE/bin/nook-shell"          "$HOME/.local/bin/nook-shell"
   # widget settings (hosts, CalDAV, weather place) are personal: copied once, never overwritten
   if [ ! -e "$CFG/nook/widgets.conf" ]; then
     install -Dm644 "$TILE/config/widgets.example.conf" "$CFG/nook/widgets.conf"

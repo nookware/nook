@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# nook-shell: runs the Quickshell shell (qs -c nook) and brings it back when it crashes.
+#
+# Quickshell has no restart of its own, so without this a crash left the session without bar,
+# launcher and control center until SUPER ⇧ R. A stop on purpose (SUPER ⇧ R and logout send
+# SIGTERM, Ctrl+C SIGINT, or a clean exit) ends this too. Each run's output goes to
+# $XDG_RUNTIME_DIR/nook-shell.log (RAM); after a crash its last 400 lines are kept in
+# ~/.local/state/nook/shell-crash-<time>.log, which survives a reboot. Five crashes within a
+# minute: it gives up and says so.
+state="${XDG_STATE_HOME:-$HOME/.local/state}/nook"
+out="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/nook-shell.log"
+crashes=()
+
+while :; do
+  qs -n -c nook > "$out" 2>&1
+  rc=$?
+  case $rc in 0|130|143) exit "$rc" ;; esac      # clean, SIGINT, SIGTERM: stopped on purpose
+
+  now=$(date +%s)
+  crashes+=("$now")
+  mkdir -p "$state"
+  log="$state/shell-crash-$(date +%Y%m%d-%H%M%S).log"
+  { echo "qs -c nook exited with $rc at $(date) (139 = segfault, 134 = abort)"; tail -n 400 "$out"; } > "$log" 2>/dev/null
+
+  recent=0
+  for t in "${crashes[@]}"; do [ $((now - t)) -lt 60 ] && recent=$((recent + 1)); done
+  if [ "$recent" -ge 5 ]; then
+    notify-send -u critical "nook: the shell keeps crashing" \
+      "Gave up after 5 crashes in a minute. Logs: ~/.local/state/nook/shell-crash-*.log · SUPER ⇧ R starts it again" 2>/dev/null
+    exit "$rc"
+  fi
+  notify-send "nook: the shell crashed and restarted" "exit $rc · log: ${log/#$HOME/\~}" 2>/dev/null
+  sleep 1
+done

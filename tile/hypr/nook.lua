@@ -36,7 +36,7 @@ hl.on("hyprland.start", function()
         .. "HYPRLAND_INSTANCE_SIGNATURE DISPLAY QT_QPA_PLATFORMTHEME XCURSOR_THEME XCURSOR_SIZE XDG_DATA_DIRS XDG_MENU_PREFIX "
         .. "&& { [ -x /usr/libexec/pam_kwallet_init ] && /usr/libexec/pam_kwallet_init; true; } "
         .. "&& systemctl --user start hyprland-session.target hyprpolkitagent "
-        .. "; kbuildsycoca6 >/dev/null 2>&1; nook-session-look hyprland; { nook-autostart start & }; exec qs -c nook")  -- Ramen icons for KDE apps, then the shell
+        .. "; kbuildsycoca6 >/dev/null 2>&1; nook-session-look hyprland; { nook-autostart start & }; exec nook-shell")  -- Ramen icons for KDE apps, then the shell (restarted if it crashes)
     hl.exec_cmd("mako")                                 -- notifications
     hl.exec_cmd("hypridle")                             -- lock when idle
 end)
@@ -340,7 +340,7 @@ hl.bind(MS("PRINT"), hl.dsp.exec_cmd("nook-shot screen"))
 bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet peek"),           "system: this cheatsheet")
 -- kded6 grabs the tray name while qs is down, and tray apps only register once: so stop kded6,
 -- and restart the running autostart apps once the new qs has the tray (bin/nook-autostart)
-bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec qs -c nook"), "system: reload shell")
+bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec nook-shell"), "system: reload shell")
 bind(MS("E"),    hl.dsp.exit(),                                                    "system: exit hyprland")
 bind(M("G"),     hl.dsp.exec_cmd("nook-gamemode"),                                 "system: game mode on / off")
 bind(MS("P"),    hl.dsp.exec_cmd("nook-display"),                                  "system: screens extend ⇄ duplicate")
