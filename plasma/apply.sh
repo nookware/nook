@@ -51,7 +51,7 @@ step "backing up current settings → ${BACKUP_DIR/#$HOME/\~}"
 backup "$CFG/kdeglobals" "$CFG/kwinrc" "$CFG/kwinrulesrc" "$CFG/plasmarc" \
        "$CFG/konsolerc" "$CFG/kscreenlockerrc" "$CFG/plasma-org.kde.plasma.desktop-appletsrc" \
        "$CFG/plasmashellrc" "$CFG/kglobalshortcutsrc" "$CFG/fastfetch/config.jsonc" \
-       "$CFG/cava/config" "$CFG/btop/btop.conf" "$CFG/alacritty/alacritty.toml" "$HOME/.bashrc" \
+       "$CFG/cava/config" "$CFG/btop/btop.conf" "$HOME/.bashrc" \
        "$CFG/kcminputrc" "$CFG/bat/config" "$CFG/ripgrep/config"
 # Names the uninstaller re-applies through Plasma's own tools.
 {
@@ -132,27 +132,27 @@ fi
 kwrite --file konsolerc --group KonsoleWindow --key ShowMenuBarByDefault false
 ok "konsole profile (the fallback terminal), nook-keys"
 
-# Alacritty is the default terminal; Konsole stays on Ctrl+Alt+T for when something breaks.
-install -Dm644 "$REPO/plasma/theme/alacritty/nook.toml" "$CFG/alacritty/nook.toml"
-ramenize "$CFG/alacritty/nook.toml"
-cat > "$CFG/alacritty/alacritty.toml" <<EOF
-# Written by Nook's apply.sh (re-running it overwrites this file).
-[general]
-import = ["$CFG/alacritty/nook.toml"]
-
-[font]
-normal = { family = "$FONT" }
-size = 11
-EOF
-[ -n "$ZSHBIN" ] && printf '\n[terminal.shell]\nprogram = "%s"\n' "$ZSHBIN" >> "$CFG/alacritty/alacritty.toml"
-kwrite --file kdeglobals --group General --key TerminalApplication alacritty
-# its .desktop id depends on how it was installed (distro package, upstream, snap)
-for id in Alacritty com.alacritty.Alacritty alacritty_alacritty; do
-  for d in "$XDG_DATA_HOME/applications" /var/lib/snapd/desktop/applications /usr/local/share/applications /usr/share/applications; do
-    [ -f "$d/$id.desktop" ] && { kwrite --file kdeglobals --group General --key TerminalService "$id.desktop"; break 2; }
-  done
-done
-ok "alacritty is the default terminal (Konsole still on Ctrl+Alt+T)"
+# kitty is the default terminal, the same one as in nook-tile; Konsole stays on Ctrl+Alt+T for
+# when something breaks. nook-tile links ~/.config/kitty/nook.conf into the repo; when that link
+# is there it stays (one terminal look for both sessions), otherwise Plasma's palette gets a copy.
+mkdir -p "$CFG/kitty"
+if [ -L "$CFG/kitty/nook.conf" ]; then
+  ok "kitty: nook-tile's config kept"
+else
+  install -Dm644 "$REPO/tile/kitty/nook.conf" "$CFG/kitty/nook.conf"
+  [ "$PALETTE" = ramen ] || python3 -I "$REPO/lib/recolor.py" --from ramen --to "$PALETTE" "$CFG/kitty/nook.conf" >/dev/null
+fi
+touch "$CFG/kitty/kitty.conf"
+grep -q '^include nook.conf' "$CFG/kitty/kitty.conf" || printf '\ninclude nook.conf\n' >> "$CFG/kitty/kitty.conf"
+[ -n "$ZSHBIN" ] && ! grep -q '^shell ' "$CFG/kitty/kitty.conf" && printf 'shell %s\n' "$ZSHBIN" >> "$CFG/kitty/kitty.conf"
+kwrite --file kdeglobals --group General --key TerminalApplication kitty
+kwrite --file kdeglobals --group General --key TerminalService kitty.desktop
+# Alacritty was the terminal before: nook's own config for it goes
+if grep -qs "Written by Nook's apply.sh" "$CFG/alacritty/alacritty.toml"; then
+  rm -f "$CFG/alacritty/alacritty.toml"
+fi
+rm -f "$CFG/alacritty/nook.toml"; rmdir "$CFG/alacritty" 2>/dev/null || true
+ok "kitty is the default terminal (Konsole still on Ctrl+Alt+T)"
 
 # Zed: native (~/.config/zed) and Flatpak (its own config dir) each get the theme + font.
 zed_dirs=()

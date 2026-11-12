@@ -1,4 +1,4 @@
-# Nook shell look. Active only inside Alacritty or the Nook Konsole profile (both set NOOK=1),
+# Nook shell look. Active only inside kitty or the Nook Konsole profile (both set NOOK=1),
 # so other terminals keep their own prompt.
 NOOK_FETCH=1
 [ -f "$HOME/.local/share/nook/shell.conf" ] && . "$HOME/.local/share/nook/shell.conf"

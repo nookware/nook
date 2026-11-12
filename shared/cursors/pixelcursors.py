@@ -2,7 +2,11 @@
 """Nook-Pixel: an old-school 1-bit cursor theme (Win95 / Mac classic), drawn as pixel art and
 scaled with hard edges. Writes Xcursor files directly (no xcursorgen, no Pillow).
 
-usage: pixelcursors.py [DEST]     default DEST: ~/.local/share/icons/Nook-Pixel
+usage: pixelcursors.py [DEST]                     Nook-Pixel (default DEST ~/.local/share/icons/Nook-Pixel)
+       pixelcursors.py --style=Neon [DEST]        one glowing style: Halo, Neon, Ember, Dusk, Sign
+       pixelcursors.py --all [ICONS_DIR]          every style as Nook-<Style>
+       pixelcursors.py --sheet preview.png        a preview of every style (ImageMagick)
+       --palette=NAME                             the glow colours from palettes/NAME.json (ramen)
 
 Shapes are drawn as FILL only: 'o' = white (ink), 'y' = orange sand, 'r' = red, '#' = black.
 A 1px black outline is added around every filled pixel automatically, so the classic look
@@ -191,66 +195,163 @@ NAMES = {
                     "size_bdiag", "fd_double_arrow", "fcf1c3c7cd4491d801f1e1c78f100000"],
 }
 
-# nominal size → integer pixel scale (hard edges)
-SIZES = {16: 1, 24: 2, 32: 2, 48: 3, 64: 4, 96: 6}
+# nominal size → pixel scale (hard edges)
+SIZES = {16: 1, 20: 1.5, 24: 2, 32: 2, 48: 3, 64: 4, 96: 6}     # 1.5: nearest pixel, still hard-edged
 
 
-def parse(art):
+def rgb(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def argb(v):
+    return ((v >> 16) & 255, (v >> 8) & 255, v & 255)
+
+
+# ── styles: the same pixel shapes, painted and lit differently ──────────────────────────────────
+# body   the fill ('o')            line  the 1px outline (a colour, or (top, bottom) for a gradient)
+# y / r  the two accent fills     glow  None, or (radius in shape pixels, gain, tint or None)
+#        a tint lights the glow in one colour; without one every lit pixel glows in its own colour
+def styles(roles):
+    c = lambda k: rgb(roles[k])
+    dark, ink, cyan, red = c("bg100"), c("ink"), c("focus"), c("time")
+    gold, orange = c("files"), c("danger")
+    return {
+        "Pixel": dict(body=argb(INK), line=argb(BLACK), y=argb(SAND), r=argb(RED), glow=None,
+                      comment="Old-school pixel cursors for nook (Win95 / Mac classic)"),
+        "Halo":  dict(body=ink, line=c("bg000"), y=gold, r=orange, glow=(2.0, 1.1, cyan),
+                      comment="The pixel cursors with the bar's cyan halo"),
+        "Neon":  dict(body=dark, line=cyan, y=gold, r=orange, glow=(1.6, 1.6, None),
+                      comment="A neon-tube outline in the focus cyan, glowing"),
+        "Ember": dict(body=dark, line=red, y=gold, r=orange, glow=(1.6, 1.6, None),
+                      comment="A neon-tube outline in the accent red, glowing"),
+        "Dusk":  dict(body=dark, line=(cyan, red), y=gold, r=orange, glow=(1.6, 1.6, None),
+                      comment="Neon tube turning cyan to red, like the window border"),
+        "Sign":  dict(body=cyan, line=c("bg000"), y=gold, r=orange, glow=(2.4, 0.9, None),
+                      comment="A solid lit sign in cyan, softly glowing"),
+    }
+
+
+def parse(art, st):
+    """→ grid of (r, g, b) or None at shape resolution (outline included), the hotspot, lit mask."""
     rows = art.strip("\n").split("\n")
     w = max(len(r) for r in rows) + 2           # 1px border each side for the outline
     h = len(rows) + 2
-    grid = [[0] * w for _ in range(h)]
+    fills = {"o": st["body"], "@": st["body"], "y": st["y"], "r": st["r"], "#": None}
+    grid = [[None] * w for _ in range(h)]
+    kind = [[""] * w for _ in range(h)]
     hot = (1, 1)
     for y, r in enumerate(rows):
         for x, ch in enumerate(r):
-            if ch in COLOURS:
-                grid[y + 1][x + 1] = COLOURS[ch]
+            if ch in fills:
+                grid[y + 1][x + 1] = fills[ch] if ch != "#" else st["line"] if isinstance(st["line"][0], int) else st["line"][0]
+                kind[y + 1][x + 1] = "line" if ch == "#" else "accent" if ch in "yr" else "body"
             if ch == "@":
                 hot = (x + 1, y + 1)
-    # outline: every empty pixel next to a filled one (8-neighbourhood) turns black
-    out = [row[:] for row in grid]
+    line = st["line"]
     for y in range(h):
+        col = line if isinstance(line[0], int) else tuple(round(a + (b - a) * y / (h - 1)) for a, b in zip(*line))
         for x in range(w):
-            if grid[y][x]:
+            if kind[y][x] == "line":
+                grid[y][x] = col
+            if kind[y][x]:
                 continue
-            if any(0 <= y + dy < h and 0 <= x + dx < w and grid[y + dy][x + dx] not in (0, BLACK)
-                   for dy in (-1, 0, 1) for dx in (-1, 0, 1)):
-                out[y][x] = BLACK
-    return out, hot
+            near = {kind[y + dy][x + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                    if 0 <= y + dy < h and 0 <= x + dx < w}
+            if "body" in near:
+                grid[y][x], kind[y][x] = col, "edge"
+            elif "accent" in near:                  # coloured signs keep a dark rim, not the neon line
+                grid[y][x], kind[y][x] = st.get("rim", argb(BLACK)), "rim"
+    return grid, kind, hot
 
 
-def scaled(grid, hot, s):
-    h, w = len(grid), len(grid[0])
-    pix = []
-    for y in range(h * s):
-        row = grid[y // s]
-        for x in range(w * s):
-            pix.append(row[x // s])
-    return w * s, h * s, hot[0] * s + s // 2, hot[1] * s + s // 2, pix
+def blur(ch, w, h, r):
+    """three box blurs ≈ a gaussian; ch is a flat list of floats."""
+    for _ in range(3):
+        for horiz in (True, False):
+            n, m = (w, h) if horiz else (h, w)
+            out = [0.0] * len(ch)
+            for j in range(m):
+                idx = (lambda i: j * w + i) if horiz else (lambda i: i * w + j)
+                acc, k = 0.0, 2 * r + 1
+                line = [ch[idx(i)] for i in range(n)]
+                for i in range(-r, r + 1):
+                    acc += line[i] if 0 <= i < n else 0.0
+                for i in range(n):
+                    out[idx(i)] = acc / k
+                    a, b = i + r + 1, i - r
+                    acc += (line[a] if a < n else 0.0) - (line[b] if b >= 0 else 0.0)
+            ch = out
+    return ch
+
+
+def render(grid, kind, hot, s, st):
+    """→ (w, h, xhot, yhot, premultiplied ARGB pixels) at pixel scale s, glow included."""
+    glow = st["glow"]
+    pad = 0 if not glow else int(glow[0] * s * 2.2) + 1
+    gh, gw = len(grid), len(grid[0])
+    sw, sh = round(gw * s), round(gh * s)
+    W, H = sw + 2 * pad, sh + 2 * pad
+    sharp = [None] * (W * H)
+    for y in range(sh):
+        row = grid[int(y / s)]
+        for x in range(sw):
+            sharp[(y + pad) * W + x + pad] = row[int(x / s)]
+    out = []
+    if glow:
+        radius, gain, tint = glow
+        lit = [[None] * gw for _ in range(gh)]
+        for y in range(gh):
+            for x in range(gw):
+                k = kind[y][x]
+                if grid[y][x] is None or k in ("", "rim"):
+                    continue
+                if tint:
+                    lit[y][x] = tint
+                elif st["body"] != grid[y][x] or k == "accent" or k != "body" or sum(st["body"]) > 200:
+                    lit[y][x] = grid[y][x]
+        ca, cr, cg, cb = ([0.0] * (W * H) for _ in range(4))
+        for y in range(sh):
+            for x in range(sw):
+                v = lit[int(y / s)][int(x / s)]
+                if v:
+                    i = (y + pad) * W + x + pad
+                    ca[i], cr[i], cg[i], cb[i] = 1.0, v[0] / 255, v[1] / 255, v[2] / 255
+        r = max(1, round(radius * s / 1.7))
+        ca, cr, cg, cb = (blur(c, W, H, r) for c in (ca, cr, cg, cb))
+    for i, v in enumerate(sharp):
+        if v is not None:
+            out.append(0xFF000000 | v[0] << 16 | v[1] << 8 | v[2])
+        elif glow and ca[i] > 0.004:
+            a = min(1.0, ca[i] * gain)
+            f = a / ca[i]                       # scale the premultiplied colour with the alpha
+            px = [min(255, round(c * f * 255)) for c in (cr[i], cg[i], cb[i])]
+            out.append(round(a * 255) << 24 | px[0] << 16 | px[1] << 8 | px[2])
+        else:
+            out.append(0)
+    return W, H, int((hot[0] + 0.5) * s) + pad, int((hot[1] + 0.5) * s) + pad, out
 
 
 def xcursor(images):
-    """images: list of (nominal, w, h, xhot, yhot, pixels ARGB). Returns Xcursor file bytes."""
+    """images: list of (nominal, w, h, xhot, yhot, premultiplied ARGB). Returns Xcursor file bytes."""
     ntoc = len(images)
     header = struct.pack("<4sIII", b"Xcur", 16, 0x10000, ntoc)
     pos = 16 + ntoc * 12
     toc, chunks = b"", b""
     for nominal, w, h, xh, yh, pix in images:
         chunk = struct.pack("<IIIIIIIII", 36, 0xFFFD0002, nominal, 1, w, h, xh, yh, 0)
-        chunk += struct.pack("<%dI" % len(pix), *pix)        # opaque/transparent only: no premultiply needed
+        chunk += struct.pack("<%dI" % len(pix), *pix)
         toc += struct.pack("<III", 0xFFFD0002, nominal, pos)
         chunks += chunk
         pos += len(chunk)
     return header + toc + chunks
 
 
-def main():
-    dest = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else "~/.local/share/icons/Nook-Pixel")
+def write_theme(dest, name, st, sizes=SIZES):
     cdir = os.path.join(dest, "cursors")
     os.makedirs(cdir, exist_ok=True)
     for shape, art in SHAPES.items():
-        grid, hot = parse(art)
-        data = xcursor([(n, *scaled(grid, hot, s)) for n, s in SIZES.items()])
+        grid, kind, hot = parse(art, st)
+        data = xcursor([(n, *render(grid, kind, hot, s, st)) for n, s in sizes.items()])
         first, *aliases = NAMES[shape]
         with open(os.path.join(cdir, first), "wb") as f:
             f.write(data)
@@ -260,8 +361,62 @@ def main():
                 os.remove(p)
             os.symlink(first, p)
     with open(os.path.join(dest, "index.theme"), "w") as f:
-        f.write("[Icon Theme]\nName=Nook-Pixel\nComment=Old-school pixel cursors for nook-tile (Ramen Sign)\n")
-    print(f"Nook-Pixel → {dest} ({len(SHAPES)} shapes, sizes {', '.join(map(str, SIZES))})")
+        f.write(f"[Icon Theme]\nName={name}\nComment={st['comment']}\n")
+
+
+def sheet(path, sts, scale=3):
+    """a preview PNG: one row per style, every shape, on dark and light ground (needs ImageMagick)."""
+    import subprocess
+    cell, rows = int(26 * scale) + 40, []
+    W = cell * len(SHAPES)
+    for name, st in sts.items():
+        for ground in ((13, 13, 13), (232, 232, 232)):
+            buf = bytearray(ground * (W * cell))
+            for n, art in enumerate(SHAPES.values()):
+                w, h, _, _, pix = render(*parse(art, st), scale, st)
+                ox, oy = n * cell + (cell - w) // 2, (cell - h) // 2
+                for y in range(h):
+                    for x in range(w):
+                        v = pix[y * w + x]
+                        a = (v >> 24) / 255
+                        if not a:
+                            continue
+                        i = ((oy + y) * W + ox + x) * 3
+                        for k, sh in enumerate((16, 8, 0)):
+                            buf[i + k] = min(255, round(((v >> sh) & 255) + buf[i + k] * (1 - a)))
+            rows.append((name, bytes(buf)))
+    raw = b"".join(b for _, b in rows)
+    subprocess.run(["magick", "-size", f"{W}x{cell * len(rows)}", "-depth", "8", "rgb:-",
+                    "(", "-size", f"140x{cell * len(rows)}", "xc:#0d0d0d", "-fill", "#f2f2f2",
+                    "-font", subprocess.run(["fc-match", "-f", "%{file}", "JetBrains Mono"], capture_output=True, text=True).stdout, "-pointsize", "22",
+                    *sum((["-annotate", f"+12+{i * 2 * cell + cell // 2 + 8}", n] for i, n in enumerate(sts)), []),
+                    ")", "+swap", "+append", path], input=raw, check=True)
+
+
+def main():
+    import argparse
+    import json
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("dest", nargs="?", help="theme dir (one style) or parent dir (--all)")
+    ap.add_argument("--style", default="Pixel")
+    ap.add_argument("--all", action="store_true", help="write every style as Nook-<Style> into DEST")
+    ap.add_argument("--palette", default="ramen")
+    ap.add_argument("--sheet", metavar="PNG", help="only draw a preview of every style")
+    a = ap.parse_args()
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, "..", "..", "palettes", a.palette + ".json")) as f:
+        roles = json.load(f)["roles"]
+    sts = styles(roles)
+    if a.sheet:
+        sheet(a.sheet, sts)
+        print(f"preview → {a.sheet}")
+        return
+    picked = sts if a.all else {a.style: sts[a.style]}
+    base = os.path.expanduser(a.dest or ("~/.local/share/icons" if a.all else f"~/.local/share/icons/Nook-{a.style}"))
+    for name, st in picked.items():
+        dest = os.path.join(base, f"Nook-{name}") if a.all else base
+        write_theme(dest, f"Nook-{name}", st)
+        print(f"Nook-{name} → {dest} ({len(SHAPES)} shapes, sizes {', '.join(map(str, SIZES))})")
 
 
 if __name__ == "__main__":

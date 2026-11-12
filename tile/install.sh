@@ -175,6 +175,8 @@ if on shell; then
   link "$TILE/bin/nook-feed"           "$HOME/.local/bin/nook-feed"
   link "$TILE/bin/nook-wired"          "$HOME/.local/bin/nook-wired"
   link "$TILE/bin/nook-autostart"      "$HOME/.local/bin/nook-autostart"
+  link "$TILE/bin/nook-shell"          "$HOME/.local/bin/nook-shell"
+  link "$TILE/bin/nook-tray-menuonly"  "$HOME/.local/bin/nook-tray-menuonly"
   # widget settings (hosts, CalDAV, weather place) are personal: copied once, never overwritten
   if [ ! -e "$CFG/nook/widgets.conf" ]; then
     install -Dm644 "$TILE/config/widgets.example.conf" "$CFG/nook/widgets.conf"
@@ -198,7 +200,8 @@ fi
 if on look; then
 # ── old-school pixel cursors (generated, no extra packages) ──
 step "cursor"
-python3 -I "$REPO/shared/cursors/pixelcursors.py" "$XDG_DATA_HOME/icons/Nook-Pixel" >/dev/null && ok "Nook-Pixel cursor theme"
+python3 -I "$REPO/shared/cursors/pixelcursors.py" --all --palette="$palette" "$XDG_DATA_HOME/icons" >/dev/null \
+  && ok "cursor themes Nook-Pixel, -Halo, -Neon, -Ember, -Dusk, -Sign (Neon is the default; try another: hyprctl setcursor Nook-Ember 16)"
 
 # ── icons in this palette (shared/icons/build.sh), for Qt apps in this session ──
 "$REPO/shared/icons/build.sh" "$palette" || warn "Qt apps keep the default icons"
@@ -329,6 +332,9 @@ NoDisplay=true
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=1
 DESKTOP
+  # the IBus portal only where IBus runs, so Flatpak apps don't leave a failed unit behind
+  [ -f /usr/share/dbus-1/services/org.freedesktop.portal.IBus.service ] \
+    && link "$TILE/dbus/org.freedesktop.portal.IBus.service" "$XDG_DATA_HOME/dbus-1/services/org.freedesktop.portal.IBus.service"
   # graphical-session.target for the portal (Hyprland without uwsm does not start it)
   link "$TSRC/systemd/hyprland-session.target" "$CFG/systemd/user/hyprland-session.target"
   systemctl --user daemon-reload 2>/dev/null || true

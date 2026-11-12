@@ -31,11 +31,12 @@ hl.on("hyprland.start", function()
     -- it unlocks the wallet and serves org.freedesktop.secrets. Plasma runs it itself, but its
     -- autostart entry has X-systemd-skip, so here nobody would, and Nextcloud (started by the
     -- session target) found no keychain and asked for a fresh login every boot.
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP "
+    -- command -p: the system one, not a copy a PATH entry (conda …) may put first
+    hl.exec_cmd("command -p dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP "
         .. "HYPRLAND_INSTANCE_SIGNATURE DISPLAY QT_QPA_PLATFORMTHEME XCURSOR_THEME XCURSOR_SIZE XDG_DATA_DIRS XDG_MENU_PREFIX "
         .. "&& { [ -x /usr/libexec/pam_kwallet_init ] && /usr/libexec/pam_kwallet_init; true; } "
         .. "&& systemctl --user start hyprland-session.target hyprpolkitagent "
-        .. "; kbuildsycoca6 >/dev/null 2>&1; nook-session-look hyprland; { nook-autostart start & }; exec qs -c nook")  -- Ramen icons for KDE apps, then the shell
+        .. "; kbuildsycoca6 >/dev/null 2>&1; nook-session-look hyprland; { nook-autostart start & }; exec nook-shell")  -- Ramen icons for KDE apps, then the shell (restarted if it crashes)
     hl.exec_cmd("mako")                                 -- notifications
     hl.exec_cmd("hypridle")                             -- lock when idle
 end)
@@ -65,7 +66,7 @@ end
 -- /etc/xdg/menus/applications.menu and Dolphin knows no apps (Gwenview, Okular … missing).
 hl.env("XDG_MENU_PREFIX", "plasma-")
 
-hl.env("XCURSOR_THEME", "Nook-Pixel")     -- old-school pixel cursors (shared/cursors/pixelcursors.py)
+hl.env("XCURSOR_THEME", "Nook-Neon")      -- glowing pixel cursors (shared/cursors/pixelcursors.py --all)
 hl.env("XCURSOR_SIZE", "16")
 hl.env("HYPRCURSOR_SIZE", "16")
 -- Qt apps: qt6ct (the KDE-aware build) with the NookRamen colour scheme, Breeze style, Nook icons.
@@ -209,7 +210,10 @@ hl.window_rule({
 hl.config({
     general = { allow_tearing = true },   -- only windows with `immediate` tear
     misc    = { vrr = 2 },                -- variable refresh rate for fullscreen windows
-    render  = { direct_scanout = 2 },     -- skip compositing for fullscreen games
+    render  = {
+        direct_scanout = 2,               -- skip compositing for fullscreen games
+        cm_auto_hdr    = 0,               -- fullscreen HDR video (YouTube) stays SDR instead of a dark HDR switch
+    },
 })
 -- Steam/Proton games (steam_app_<id>), gamescope, Wine/Lutris .exe windows
 hl.window_rule({
@@ -326,7 +330,7 @@ function nook_focus_browser()
     if pick.active and #wins > 1 then pick = wins[#wins] end
     hl.dispatch(hl.dsp.focus({ window = "address:" .. pick.address }))
 end
-bind(M("B"),       function() nook_focus_browser() end, "apps: browser (the open one, or a new one)")
+bind(M("B"),       function() nook_focus_browser() end, "apps: browser (the open one)")
 bind(MS("RETURN"), hl.dsp.exec_cmd(term .. " -e btop"), "apps: btop")
 
 -- windows
@@ -345,7 +349,7 @@ bind(M("mouse:273"), hl.dsp.window.resize(), "windows: drag = resize", { mouse =
 
 -- workspaces
 for n = 1, 9 do
-    bind(M(tostring(n)),  function() nook_show_workspace(n) end, "workspaces: bring " .. n .. " here (trades screens if it's on the other one)")
+    bind(M(tostring(n)),  function() nook_show_workspace(n) end, "workspaces: bring here (swaps screens) " .. n)
     bind(MS(tostring(n)), hl.dsp.window.move({ workspace = n }),  "workspaces: send window to " .. n)
 end
 bind(M("S"),          hl.dsp.workspace.toggle_special("scratch"),         "workspaces: scratchpad")
@@ -360,10 +364,10 @@ bind(MS("W"),    hl.dsp.exec_cmd("nook-shot window"),                           
 bind(MS("A"),    hl.dsp.exec_cmd("nook-shot screen"),                              "system: screenshot screen")
 hl.bind("PRINT",    hl.dsp.exec_cmd("nook-shot area"))
 hl.bind(MS("PRINT"), hl.dsp.exec_cmd("nook-shot screen"))
-bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet toggle"),         "system: this cheatsheet")
+bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet peek"),           "system: this cheatsheet")
 -- kded6 grabs the tray name while qs is down, and tray apps only register once: so stop kded6,
 -- and restart the running autostart apps once the new qs has the tray (bin/nook-autostart)
-bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec qs -c nook"), "system: reload shell")
+bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec nook-shell"), "system: reload shell")
 bind(MS("E"),    hl.dsp.exit(),                                                    "system: exit hyprland")
 bind(M("G"),     hl.dsp.exec_cmd("nook-gamemode"),                                 "system: game mode on / off")
 bind(MS("P"),    hl.dsp.exec_cmd("nook-display"),                                  "system: screens extend ⇄ duplicate")

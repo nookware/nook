@@ -106,6 +106,16 @@ Scope {
     }
     Timer { interval: 5000; repeat: true; triggeredOnStart: true; running: Ui.controlOpen && Ui.controlTab === "net"; onTriggered: nm.running = true }
 
+    // tray items that only have a menu (Ayatana ones say so nowhere; nook-tray-menuonly checks D-Bus)
+    property var trayMenuOnly: []
+    Process {
+        id: trayProbe
+        command: ["nook-tray-menuonly"]
+        stdout: StdioCollector { onStreamFinished: root.trayMenuOnly = this.text.split("\n").filter(l => l !== "") }
+    }
+    Timer { interval: 10000; repeat: true; triggeredOnStart: true; running: Ui.controlOpen && Ui.controlTab === "apps"; onTriggered: trayProbe.running = true }
+    Connections { target: SystemTray.items; ignoreUnknownSignals: true; function onValuesChanged() { trayProbe.running = true } }
+
     readonly property var wifiDev: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
     readonly property var wifiNets: (wifiDev?.networks?.values ?? []).slice()
         .sort((a, b) => (b.connected - a.connected) || (b.known - a.known) || (b.signalStrength - a.signalStrength))
@@ -933,7 +943,7 @@ Scope {
                                     trow.modelData.display(panel, p.x, p.y);
                                 }
                                 function run() {
-                                    if (trow.modelData.onlyMenu) { trow.openMenu(30, trow.height); return; }
+                                    if (trow.modelData.onlyMenu || root.trayMenuOnly.includes(trow.modelData.id)) { trow.openMenu(30, trow.height); return; }
                                     trow.modelData.activate();
                                     Ui.controlOpen = false;
                                 }

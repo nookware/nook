@@ -14,6 +14,10 @@ case "${1:-}" in
 esac
 icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons"
 [ -d "$icons/$want" ] || exit 0                    # theme not built: leave things as they are
+# GTK apps (file dialogs, Signal, Zenity …) read theirs from gsettings, not kdeglobals
+if command -v gsettings >/dev/null && [ "$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null)" != "'$want'" ]; then
+  gsettings set org.gnome.desktop.interface icon-theme "$want" 2>/dev/null || true
+fi
 cur=$(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null || true)
 [ "$cur" = "$want" ] && exit 0
 changeicons=$(ls /usr/libexec/plasma-changeicons /usr/lib/*/libexec/plasma-changeicons \

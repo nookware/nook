@@ -62,7 +62,7 @@ alias keys='nook-keys'
 [ -f "$HOME/.local/share/nook/tools.sh" ] && . "$HOME/.local/share/nook/tools.sh"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
-# fastfetch once per Nook terminal (Alacritty, kitty and the Nook Konsole profile set NOOK=1)
+# fastfetch once per Nook terminal (kitty and the Nook Konsole profile set NOOK=1)
 if (( NOOK_FETCH )) && [[ -o interactive && -n ${NOOK:-} && -z ${NOOK_FETCHED:-} ]] && command -v fastfetch >/dev/null; then
   export NOOK_FETCHED=1
   if [[ -n ${NOOK_FASTFETCH:-} && -f $NOOK_FASTFETCH ]]; then fastfetch -c "$NOOK_FASTFETCH"; else fastfetch; fi

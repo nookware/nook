@@ -16,7 +16,7 @@ they link to a recoloured copy in `~/.local/share/nook/tile-build`. Re-run the i
 | --- | --- | --- | --- |
 | **Nobara 44+** | COPR `sdegler/hyprland` | Nobara repo | Qt apps fully themed (KDE-aware qt6ct reads `NookRamen.colors`) |
 | **Fedora 44+** | COPR `sdegler/hyprland` | COPR `errornointernet/quickshell` | same as Nobara. Breeze only if KDE is installed, Fusion otherwise |
-| **Ubuntu 26.04+** and distros based on it (Mint, Pop!_OS, Kubuntu …) | PPA `cppiber/hyprland` | apt from 26.10 on; on 26.04 **built from source** (tag `v0.3.2`, a few minutes) | plain qt6ct uses the `NookRamen.conf` palette, so KDE apps' own colour logic doesn't follow |
+| **Ubuntu 26.04+** and distros based on it (Mint, Pop!_OS, Kubuntu …) | PPA `cppiber/hyprland` | apt from 26.10 on; on 26.04 **built from source** (tag `v0.3.2`, a few minutes) | plain qt6ct uses the `nook-tile.conf` palette (`tile/qt/qt6ct.conf`), so KDE apps' own colour logic doesn't follow |
 | Ubuntu 24.04, Debian | ✗ | ✗ | Qt 6.4 is too old (needs 6.9+); no Hyprland 0.57 packages |
 
 The config uses Hyprland's **Lua** format, which is why Hyprland has to be 0.57 or newer.
@@ -37,7 +37,7 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
 | `kitty/nook.conf` | `~/.config/kitty/` (link + `include`) | The palette, 90% opacity; `NOOK=1` and the axolotl fastfetch for the shell part. |
 | `ssh/nook.conf` | `~/.ssh/nook.conf` (copy, mode 600, + `Include` at the end of `~/.ssh/config`) | `TERM=xterm-256color` for ssh, so `nano` & co. work on machines without kitty's terminfo (`Error opening terminal: xterm-kitty`). A `Host` block of your own above it wins. |
 | `mako/config` | `~/.config/mako/` (link) | Notifications top-right: `[i]` / `[~]` / `[!!]`, critical ones in red. |
-| `../shared/cursors/pixelcursors.py` | `~/.local/share/icons/Nook-Pixel` (generated) | Old-school pixel cursors (Win95 / Mac classic): white with a black outline, hard-edged, orange sand in the hourglass, red no-entry sign. |
+| `../shared/cursors/pixelcursors.py` | `~/.local/share/icons/Nook-{Pixel,Halo,Neon,Ember,Dusk,Sign}` (generated) | Pixel-art cursors in six styles, in the palette's colours. The default is **Neon** at size 16: a dark fill, a cyan neon-tube outline and a cyan glow. Pixel is the old Win95 / Mac classic look; Halo, Ember, Dusk and Sign are the others. Switch live with `hyprctl setcursor Nook-Ember 16`; `pixelcursors.py --sheet preview.png` draws them all side by side. |
 | `systemd/hyprland-session.target` | `~/.config/systemd/user/` (link) | Starts `graphical-session.target` so xdg-desktop-portal runs (screen sharing, file dialogs). |
 | `../shared/icons/build.sh <palette>` | `~/.local/share/icons/Nook-Ramen` or `Nook` (generated) | The rice's icon set (BeautyLine + Breeze symbolic) with one neon per category: files gold, dev aqua, comms cyan, network blue, system amber, media rose, time red, security orange, session cream. KDE apps read the icon theme from the shared `kdeglobals`, so `bin/nook-session-look` sets `Nook-Ramen` when Hyprland starts and puts Plasma's back when Plasma starts (a Plasma-only autostart entry). |
 | `qt/qt6ct.conf` + `../palettes/kde/*.colors` | `~/.config/qt6ct/` | Qt/KDE apps in the palette: Breeze style, cyan selection and focus, your Plasma fonts and icons. Only the Hyprland session uses it (`QT_QPA_PLATFORMTHEME=qt6ct`). |
@@ -68,7 +68,7 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
   - `bt`: bluetooth on/off, scan, devices with connect/disconnect and battery. A new device pairs, gets trusted and connects with one click; `[cancel]` stops pairing, `[forget]` (click twice) removes a paired one.
   - `apps`: the background apps (the tray) as a list. Click opens, right-click opens their menu. Also what's playing.
   - `nook`: what the shell shows, live. Every bar module (λ nook, workspaces, window, clock, cpu · ram, power), every desktop widget, the wallpaper's NOOK banner and dot grid, and the cheatsheet switch on and off with a click. The homelab hosts are added (`name` + `host` or `host:port`, `⏎`), changed (click a row) and removed (`[remove]`, click twice) here, and the weather place is set here. The switches are kept in `~/.config/nook/shell.json` (`Settings.qml`; only what's off is stored), hosts and place in `widgets.conf` (written by `nook-feed set|unset`, comments stay). Also over IPC: `qs -c nook ipc call nook toggle|on|off widget.srv`, `… nook list`.
-- **Cheatsheet** (`CheatSheet.qml`) sits on the wallpaper, under every window. `SUPER /` toggles it.
+- **Cheatsheet** (`CheatSheet.qml`): `SUPER /` shows it over every window on the focused screen (blurred behind); any key or click closes it. It can also sit on the wallpaper, under every window: the `cheatsheet` switch in the nook tab.
   - It reads the binds from `hyprctl binds -j`. Every bind in `nook.lua` with a description
     `"group: label"` shows up there, so `nook.lua` is the only list of keys.
   - Group colours: APPS amber, SETTINGS aqua (control center, net, bluetooth, keyboard), WINDOWS cyan, WORKSPACES blue, SYSTEM red.
@@ -87,6 +87,13 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
 ## Autostart
 
 Apps in `~/.config/autostart` and `/etc/xdg/autostart` (Blip, KDE Connect …) run like under Plasma, through systemd's XDG autostart generator, which honours `OnlyShowIn`/`NotShowIn`. They start only once Quickshell owns the tray (`bin/nook-autostart start`), because tray apps register their icon once, when they start. `SUPER ⇧ R` restarts the running ones after the shell (`nook-autostart restart`), so their icons come back. `nook.lua` also puts `~/.local/bin` on the session's PATH, which the nook helpers (`nook-shot`, `nook-gamemode` …) need.
+
+## If the shell crashes
+
+Quickshell runs under `bin/nook-shell`, which starts it again within a second when it crashes
+and shows a notification. A stop on purpose (`SUPER ⇧ R`, logout) ends it too. Quickshell keeps
+its logs in RAM, so the crashed run's output is saved to `~/.local/state/nook/shell-crash-<time>.log`
+first, where it survives a reboot. After five crashes in a minute it gives up and says so.
 
 ## Screen sharing
 

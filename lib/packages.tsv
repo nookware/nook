@@ -18,18 +18,18 @@ playerctl	tile.shell	1	media keys and the player in the bar	playerctl	playerctl	
 nm-editor	tile.shell	0	the net tab's "settings" button (without it: nmtui in a terminal)	nm-connection-editor	network-manager-gnome	nm-connection-editor	nm-connection-editor
 hyprlock	tile.lock	1	the lock screen	hyprlock	hyprlock	-	-
 hypridle	tile.lock	1	locks and turns the screens off when you are away	hypridle	hypridle	-	-
-kitty	tile.term	1	the terminal (SUPER ⏎)	kitty	kitty	kitty	kitty
+kitty	tile.term,plasma	1	the terminal (SUPER ⏎ in tile, Meta+Return in Plasma)	kitty	kitty	kitty	kitty
 btop	tile.term,shell.btop	1	system monitor (SUPER ⇧ ⏎)	btop	btop	btop	btop
 mako	tile.notify	1	notifications	mako	mako-notifier	mako	mako
 qt6ct	tile.look	1	Qt apps (Dolphin …) in the palette	qt6ct	qt6ct	qt6ct	qt6ct
 grim	tile.tools	1	screenshots (nook-shot, Print)	grim	grim	grim	grim
 slurp	tile.tools	1	pick a region for screenshots	slurp	slurp	slurp	slurp
 wl-clipboard	tile.tools	1	screenshots and the launcher to the clipboard	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard
+dolphin	tile.tools	1	the file manager (SUPER E)	dolphin	dolphin	dolphin	dolphin
 jetbrains-mono	tile.look,plasma	1	JetBrains Mono, the font of everything	jetbrains-mono-fonts-all	fonts-jetbrains-mono	ttf-jetbrains-mono	jetbrains-mono-fonts
 vt323	tile.look,plasma	1	VT323 pixel font for headings (from Google Fonts)	@vt323	@vt323	@vt323	@vt323
 fzf	plasma,shell.fzf	1	the fuzzy finder behind this menu and the shell's Ctrl+R	fzf	fzf	fzf	fzf
 rsvg	plasma	1	renders the wallpaper with the key cheat-sheet	librsvg2-tools	librsvg2-bin	librsvg	rsvg-convert
-alacritty	plasma	1	the default terminal in Plasma	alacritty	alacritty	alacritty	alacritty
 konsole	plasma	1	the fallback terminal (Ctrl+Alt+T)	konsole	konsole	konsole	konsole
 kde-cli-tools	plasma	1	kwriteconfig6 and friends, which apply the theme	kde-cli-tools	kde-cli-tools	-	-
 git	plasma,shell.omz,shell.prompt-nook,shell.prompt-plain,shell.git	1	fetches Krohnkite, themes and oh-my-zsh	git	git	git	git
