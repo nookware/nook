@@ -1,4 +1,4 @@
-// The bar: separate floating modules along the bottom, 10px above the edge, 12px from the sides.
+// The bar: a 30px strip flush on the bottom edge, its modules as pills inside it.
 //   λ nook · workspaces · window title ··························· cpu/ram · ● clock · date ▮▮▮▯ · power
 // The clock pill is also the control center's button: sound, net, bluetooth, the tray apps and the
 // nook tab sit behind it (ControlCenter.qml).
@@ -76,7 +76,7 @@ Scope {
         signal clicked(var mouse)
         signal scrolled(var wheel)
         implicitHeight: Theme.pill
-        implicitWidth: row.implicitWidth + 28
+        implicitWidth: row.implicitWidth + 20
         radius: Theme.radius
         color: Theme.alpha(Theme.bg100, 0.88)
         border.width: 1
@@ -101,10 +101,35 @@ Scope {
     // coloured text gets a soft halo in its own colour
     component Glow: MultiEffect {
         shadowEnabled: true
-        shadowBlur: 0.6
-        shadowOpacity: 0.55
+        shadowBlur: 0.8
+        shadowOpacity: 0.8
         shadowHorizontalOffset: 0
         shadowVerticalOffset: 0
+    }
+    // neon text: two blurred copies of the text under a crisp one. A single shadow (Glow) is too
+    // faint on thin glyphs; stacking the blur makes the halo read at bar size.
+    component Neon: Item {
+        id: neon
+        property alias text: crisp.text
+        property alias color: crisp.color
+        property alias font: crisp.font
+        property real glow: 0.9                    // halo strength, 0–1
+        implicitWidth: crisp.implicitWidth
+        implicitHeight: crisp.implicitHeight
+        Text { id: src; visible: false; layer.enabled: true; text: crisp.text; color: crisp.color; font: crisp.font }
+        Repeater {
+            model: 2
+            MultiEffect {
+                source: src
+                anchors.fill: src
+                autoPaddingEnabled: true
+                blurEnabled: true
+                blur: 1.0
+                blurMax: 10
+                opacity: neon.glow
+            }
+        }
+        Text { id: crisp; font.family: Theme.font; font.pixelSize: Theme.small; color: Theme.muted }
     }
 
     Variants {
@@ -117,12 +142,19 @@ Scope {
             screen: modelData
             WlrLayershell.namespace: "nook-bar"
             anchors { bottom: true; left: true; right: true }
-            margins { bottom: 10; left: Theme.pad; right: Theme.pad }
-            implicitHeight: Theme.pill
-            // 6 px short of the bar's top edge: with gaps_out 12, windows end 6 px above the bar,
-            // the same as the gap between two windows
-            exclusiveZone: Theme.pill + 10 - 6
+            implicitHeight: Theme.bar
+            // exactly the strip: Hyprland adds gaps_out (6) on top, so windows end 6 px above it,
+            // the same as the gap between two windows. (Hyprland counts a layer's margin into its
+            // exclusive zone, so a margin here would have to come off this number.)
+            exclusiveZone: Theme.bar
             color: "transparent"
+
+            // the strip: bg-100 at 88% with a hairline on top
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.alpha(Theme.bg100, 0.88)
+                Rectangle { anchors { top: parent.top; left: parent.left; right: parent.right } height: 1; color: Theme.line }
+            }
 
             // ── overflow: the right side (cpu/ram, clock, power) gets at most half the bar ──
             // left:  start + workspaces stay; the window tag takes the rest (title first, then
@@ -133,12 +165,15 @@ Scope {
             readonly property real half: width / 2 - Theme.gap
             readonly property real tagRoom: width - room(startPill) - room(wsPill) - room(clockPill) - room(powerPill)
                                             - (showCpu ? room(cpuPill) : 0) - 2 * Theme.gap
-            readonly property real tagFixed: 28 + 4 * 10 + lb.implicitWidth + appLbl.implicitWidth + dash.implicitWidth + rb.implicitWidth
+            readonly property real tagFixed: 20 + 4 * 10 + lb.implicitWidth + appLbl.implicitWidth + dash.implicitWidth + rb.implicitWidth
             readonly property real titleRoom: Math.min(320, tagRoom - tagFixed)
             readonly property bool showCpu: room(clockPill) + room(powerPill) + cpuPill.implicitWidth <= half
 
             RowLayout {
                 anchors.fill: parent
+                anchors.leftMargin: Theme.edge
+                anchors.rightMargin: Theme.edge
+                anchors.topMargin: 1          // below the hairline
                 spacing: Theme.gap
 
                 // ── λ nook: solid red neon, opens the hack menu (right-click: the nook tab) ──
@@ -152,7 +187,7 @@ Scope {
                     onClicked: m => m.button === Qt.RightButton ? Ui.openControl("nook") : root.openMenu()
                     layer.enabled: true
                     layer.effect: Glow { shadowColor: Theme.red; shadowBlur: 0.8; shadowOpacity: 0.7 }
-                    Text { text: "λ"; color: Theme.onAccent; font.family: Theme.pixel; font.pixelSize: 26 }
+                    Text { text: "λ"; color: Theme.onAccent; font.family: Theme.pixel; font.pixelSize: 20 }
                     Text { text: "nook"; color: Theme.onAccent; font.family: Theme.font; font.pixelSize: Theme.body; font.bold: true }
                 }
 
@@ -200,7 +235,7 @@ Scope {
                     visible: Settings.shown("bar.title") && (ToplevelManager.activeToplevel?.title ?? "") !== ""
                              && bar.tagRoom >= bar.tagFixed - dash.implicitWidth - 10
                     Label { id: lb; text: "["; color: Theme.faint }
-                    Label {
+                    Neon {
                         id: appLbl
                         // "org.kde.dolphin" → dolphin, Chromium web apps "brave-<32 letters>-default" → brave app
                         text: (ToplevelManager.activeToplevel?.appId ?? "").replace(/^(\w+)-[a-p]{32}-\w+$/, "$1 app").split(".").pop().toLowerCase()
@@ -224,10 +259,10 @@ Scope {
                     id: cpuPill
                     visible: Settings.shown("bar.cpu") && bar.showCpu
                     Label { text: "cpu" }
-                    Label { text: Stats.spark(Stats.cpuHist, 100); color: Theme.amber; font.pixelSize: 13 }
-                    Label { text: Stats.cpu + "%"; color: Theme.amber }
+                    Neon { text: Stats.spark(Stats.cpuHist, 100); color: Theme.amber; font.pixelSize: 13 }
+                    Neon { text: Stats.cpu + "%"; color: Theme.amber }
                     Label { text: "ram"; Layout.leftMargin: 4 }
-                    Label { text: Stats.ram + "%"; color: Theme.aqua }
+                    Neon { text: Stats.ram + "%"; color: Theme.aqua }
                 }
 
                 // ── clock: the overview and the control center's button. kb dot · VT323 time · date ·
@@ -263,16 +298,15 @@ Scope {
                         }
                         MouseArea { anchors.fill: parent; anchors.margins: -6; onClicked: root.switchKb() }
                     }
-                    Text {
+                    Neon {
                         id: hhmm
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         color: Theme.red
                         font.family: Theme.pixel
-                        font.pixelSize: 28
-                        layer.enabled: true
-                        layer.effect: Glow { shadowColor: Theme.red }
+                        font.pixelSize: 22
+                        glow: 1.0
                     }
-                    Rectangle { implicitWidth: 1; implicitHeight: 18; color: Theme.line }
+                    Rectangle { implicitWidth: 1; implicitHeight: 14; color: Theme.line }
                     Label {
                         // a plain date: "sa 07.11.2026" (weekday in the system language)
                         text: Qt.locale().toString(clock.date, "ddd dd.MM.yyyy").replace(/^(\S+?)\.? /, "$1 ").toLowerCase()
@@ -280,7 +314,7 @@ Scope {
                         font.pixelSize: Theme.body
                     }
                     // battery: a thin bar in its state's hue (aqua charging, gold ≤ 30 %, orange ≤ 15 %)
-                    Rectangle { visible: root.hasBatt; implicitWidth: 1; implicitHeight: 18; color: Theme.line }
+                    Rectangle { visible: root.hasBatt; implicitWidth: 1; implicitHeight: 14; color: Theme.line }
                     RowLayout {
                         visible: root.hasBatt
                         spacing: 6
@@ -310,11 +344,11 @@ Scope {
                                 }
                             }
                         }
-                        Label { text: Math.round(root.pct * 100) + "%"; color: root.battHue }
+                        Neon { text: Math.round(root.pct * 100) + "%"; color: root.battHue }
                     }
                     // muted, or a tray app asking for you: one small mark, details in the panel
                     Label { visible: clockPill.sink?.audio?.muted ?? false; text: "mute"; color: Theme.faint }
-                    Label { visible: clockPill.attention; text: "●"; color: Theme.orange }
+                    Neon { visible: clockPill.attention; text: "●"; color: Theme.orange }
                 }
 
                 // ── power: solid red like λ nook; opens the menu (power buttons), right-click locks ──
@@ -329,7 +363,7 @@ Scope {
                         : root.openMenu()
                     layer.enabled: true
                     layer.effect: Glow { shadowColor: Theme.red; shadowBlur: 0.8; shadowOpacity: 0.7 }
-                    Text { text: "⏻"; color: Theme.onAccent; font.pixelSize: 17; font.bold: true }
+                    Text { text: "⏻"; color: Theme.onAccent; font.pixelSize: 14; font.bold: true }
                 }
             }
 

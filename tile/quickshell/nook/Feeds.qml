@@ -23,9 +23,16 @@ Singleton {
     Process {
         id: wx
         command: [root.feed, "weather"]
-        stdout: StdioCollector { onStreamFinished: root.weather = root.parse(this.text, { ok: false, error: "no data" }) }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.weather = root.parse(this.text, { ok: false, error: "no data" });
+                if (root.weather.ok !== true) wxRetry.restart();
+            }
+        }
     }
     Timer { interval: 15 * 60000; running: Settings.shown("widget.weather"); repeat: true; triggeredOnStart: true; onTriggered: wx.running = true }
+    // the shell starts before the wifi is up: a failed fetch tries again in 30 s, not 15 min
+    Timer { id: wxRetry; interval: 30000; onTriggered: if (Settings.shown("widget.weather")) wx.running = true }
 
     // ── servers, every 10 s ──
     Process {
@@ -48,9 +55,15 @@ Singleton {
     Process {
         id: caldav
         command: [root.feed, "cal"]
-        stdout: StdioCollector { onStreamFinished: root.cal = root.parse(this.text, { ok: false, error: "no data" }) }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.cal = root.parse(this.text, { ok: false, error: "no data" });
+                if (root.cal.ok !== true && (root.cal.error ?? "").indexOf("URLError") >= 0) calRetry.restart();
+            }
+        }
     }
     Timer { interval: 5 * 60000; running: Settings.shown("widget.cal"); repeat: true; triggeredOnStart: true; onTriggered: caldav.running = true }
+    Timer { id: calRetry; interval: 30000; onTriggered: if (Settings.shown("widget.cal")) caldav.running = true }
     function refreshCal() { caldav.running = true }
 
     // ── widgets.conf itself, for the control center's nook tab: read with `nook-feed conf`,

@@ -42,11 +42,11 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
 | `../shared/icons/build.sh <palette>` | `~/.local/share/icons/Nook-Ramen` or `Nook` (generated) | The rice's icon set (BeautyLine + Breeze symbolic) with one neon per category: files gold, dev aqua, comms cyan, network blue, system amber, media rose, time red, security orange, session cream. KDE apps read the icon theme from the shared `kdeglobals`, so `bin/nook-session-look` sets `Nook-Ramen` when Hyprland starts and puts Plasma's back when Plasma starts (a Plasma-only autostart entry). |
 | `qt/qt6ct.conf` + `../palettes/kde/*.colors` | `~/.config/qt6ct/` | Qt/KDE apps in the palette: Breeze style, cyan selection and focus, your Plasma fonts and icons. Only the Hyprland session uses it (`QT_QPA_PLATFORMTHEME=qt6ct`). |
 
-**Red is the accent** (start button, clock, the cyan → red window border, glows, hover in Qt apps). Orange takes over danger: urgent workspaces, errors, critical notifications, the lock button. The login screen (`shared/login/login.sh`) takes any palette, for SDDM and Plasma Login.
+**Red is the accent** (start button, clock, the cyan → red window border and its halo, which turns with it, glows, hover in Qt apps). Orange takes over danger: urgent workspaces, errors, critical notifications, the lock button. The login screen (`shared/login/login.sh`) takes any palette, for SDDM and Plasma Login.
 
 ## The shell (Quickshell)
 
-- **Bar** (`Bar.qml`), floating at the bottom of every screen:
+- **Bar** (`Bar.qml`), a 30px strip flush on the bottom edge of every screen, its modules as pills inside it. Windows keep 6px from it, as from the screen edges and each other. Coloured text in it glows in its own colour (`Neon`):
   - `λ nook` in cream opens the menu; right-click opens the control center's `nook` tab.
   - Workspaces 1–9 as dots: cyan bar = on this screen, grey = occupied, red = urgent. A click brings that workspace to this screen.
   - The focused window as a `[ app — title ]` tag.
@@ -78,9 +78,9 @@ The shell, prompt and command-line tools are the shell part's (`./nook` → shel
   - `NOW // PLAYING` (MPRIS) with `[◀◀] [ ▮▮ ] [▶▶]`.
   - `WX // OUTSIDE`: weather now (symbol, temperature, feels-like, min/max, humidity, wind) and the next five 3-hour slots with rain chance, from wttr.in.
   - `SRV // HOMELAB`: your hosts with an up/down dot, a latency sparkline and the last ping. `host:port` checks a TCP port instead, for hosts that drop pings.
-  - `CAL // NEXT`: the next events from a CalDAV server (Nextcloud works), with a countdown to the first one. The password sits in the keyring, not in a file: `nook-feed cal --setup`.
+  - `CAL // NEXT`: the next events from a CalDAV server (Nextcloud works), with a countdown to the first one. The password sits in the keyring, not in a file: `nook-feed cal --setup`. The url can be the calendar home (`…/remote.php/dav/calendars/<user>/`) or the server's DAV root, which is followed to it.
   - `PROC // TOP`: the five busiest processes (idle ones by ram). Click a row, then click again within 3 s to end it; the session's own processes can't be ended.
-  - Weather place, hosts and calendar are personal, so they live in `~/.config/nook/widgets.conf` (installed once from `config/widgets.example.conf`; place and hosts can also be set in the `nook` tab). A widget with nothing configured hides, and so does one switched off in the `nook` tab (it stops polling too). `Feeds.qml` polls `bin/nook-feed`.
+  - Weather place, hosts and calendar are personal, so they live in `~/.config/nook/widgets.conf` (installed once from `config/widgets.example.conf`; place and hosts can also be set in the `nook` tab). A widget with nothing configured hides, and so does one switched off in the `nook` tab (it stops polling too). The shell usually starts before the wifi is up, so a failed weather or calendar fetch tries again after 30 s. `Feeds.qml` polls `bin/nook-feed`.
 - **Wallpaper** (`Wallpaper.qml`), drawn live per screen: dot grid, scanlines, and the glowing `NOOK` banner.
 - `Theme.qml` holds the tokens and `Stats.qml` the shared `/proc` numbers.
 

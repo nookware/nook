@@ -100,7 +100,7 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.config({
     general = {
         gaps_in     = 6,                                -- gap-in
-        gaps_out    = 12,                               -- space-3
+        gaps_out    = 6,                                -- edge (= gap-in): screen edges, the bar
         border_size = 2,
         col = {
             -- the neon sign: cyan → red, slowly rotating (borderangle below)
@@ -125,9 +125,10 @@ hl.config({
         },
         shadow = {
             enabled        = true,
-            range          = 24,
+            range          = 12,                        -- about the bar's neon halo
             render_power   = 3,
-            color          = rgba(C.cyan, "40"),        -- glow-focus halo
+            -- glow-focus halo in the border's cyan → red; the angle turns with it (below)
+            color          = { colors = { rgba(C.cyan, "66"), rgba(C.red, "66") }, angle = 45 },
             color_inactive = "rgba(00000066)",
         },
     },
@@ -154,6 +155,29 @@ hl.animation({ leaf = "layers",      enabled = true, speed = 4,  bezier = "snap"
 hl.animation({ leaf = "workspaces",  enabled = true, speed = 4,  bezier = "snap",    style = "slide" })
 hl.animation({ leaf = "border",      enabled = true, speed = 8,  bezier = "default" })
 hl.animation({ leaf = "borderangle", enabled = true, speed = 80, bezier = "default", style = "loop" })
+
+-- the halo turns with the border. Hyprland rotates gradient borders (borderangle) but not shadow
+-- gradients, so a timer turns the shadow's angle the same way: one turn per 8 s (speed 80), eased
+-- like the "default" bezier (0, .75) (.15, 1). A reload stops the old timer before starting anew.
+local GLOW_MS, GLOW_LOOP = 50, 8000
+local function bezier(t)               -- y on the "default" curve at x = t (bisection on x)
+    local function at(a, b, u) return 3 * a * u * (1 - u) ^ 2 + 3 * b * u ^ 2 * (1 - u) + u ^ 3 end
+    local lo, hi = 0, 1
+    for _ = 1, 20 do
+        local mid = (lo + hi) / 2
+        if at(0, 0.15, mid) < t then lo = mid else hi = mid end
+    end
+    return at(0.75, 1, (lo + hi) / 2)
+end
+if _G.nook_glow_timer then _G.nook_glow_timer:set_enabled(false) end
+local glow_tick = 0
+_G.nook_glow_timer = hl.timer(function()
+    glow_tick = (glow_tick + 1) % (GLOW_LOOP // GLOW_MS)
+    local angle = (45 + 360 * bezier(glow_tick * GLOW_MS / GLOW_LOOP)) % 360
+    hl.config({ decoration = { shadow = {
+        color = { colors = { rgba(C.cyan, "66"), rgba(C.red, "66") }, angle = math.floor(angle) },
+    } } })
+end, { timeout = GLOW_MS, type = "repeat" })
 
 -------------------------------------------------------------------------------
 -- layer surfaces (Quickshell) and window rules

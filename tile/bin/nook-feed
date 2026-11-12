@@ -162,6 +162,30 @@ def parse_dt(v):
     return d.replace(tzinfo=tz or dt.datetime.now().astimezone().tzinfo), False
 
 
+def is_calendar(resp):
+    rt = re.search(r"<d:resourcetype>(.*?)</d:resourcetype>", resp, re.S)
+    return bool(rt and re.search(r"<[\w-]+:calendar\s*/>", rt.group(1)))
+
+
+def home_set(url, user, pw):
+    """url itself when it holds calendars, else its calendar-home-set via current-user-principal."""
+    xml = dav("PROPFIND", url, user, pw,
+              f'<d:propfind {NS}><d:prop><d:resourcetype/></d:prop></d:propfind>', "1")
+    if any(is_calendar(r) for r in re.findall(r"<d:response>(.*?)</d:response>", xml, re.S)):
+        return url
+    href = lambda tag, x: re.search(rf"<[\w-]+:{tag}[^>]*>\s*<d:href>(.*?)</d:href>", x, re.S)
+    xml = dav("PROPFIND", url, user, pw,
+              f'<d:propfind {NS}><d:prop><d:current-user-principal/></d:prop></d:propfind>', "0")
+    m = href("current-user-principal", xml)
+    if not m:
+        return url
+    principal = urllib.parse.urljoin(url, m.group(1))
+    xml = dav("PROPFIND", principal, user, pw,
+              f'<d:propfind {NS}><d:prop><c:calendar-home-set/></d:prop></d:propfind>', "0")
+    m = href("calendar-home-set", xml)
+    return urllib.parse.urljoin(url, m.group(1)) if m else url
+
+
 def cal():
     c = conf()
     url = c.get("cal", "url", fallback="").strip()
@@ -177,12 +201,13 @@ def cal():
         return
     if not url.endswith("/"):
         url += "/"
-    # 1. the calendars under the home set
+    # 1. the calendars under the home set (a server root like …/remote.php/dav is followed to it)
+    url = home_set(url, user, pw)
     xml = dav("PROPFIND", url, user, pw,
               f'<d:propfind {NS}><d:prop><d:displayname/><d:resourcetype/></d:prop></d:propfind>', "1")
     cals = []
     for resp in re.findall(r"<d:response>(.*?)</d:response>", xml, re.S):
-        if "<cal:calendar" not in resp and "calendar/>" not in resp:
+        if not is_calendar(resp):
             continue
         href = re.search(r"<d:href>(.*?)</d:href>", resp).group(1)
         name = re.search(r"<d:displayname>(.*?)</d:displayname>", resp)

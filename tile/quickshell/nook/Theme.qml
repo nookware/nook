@@ -41,9 +41,11 @@ Singleton {
     readonly property int label: 10
 
     // shape
-    readonly property int pill:     40     // bar module height
+    readonly property int bar:      30     // the bar: a strip flush on the bottom edge
+    readonly property int pill:     24     // bar module height, inside the strip
     readonly property int gap:      8      // space-2: between bar modules
-    readonly property int pad:      12     // space-3: panel padding, gaps_out
+    readonly property int pad:      12     // space-3: panel padding
+    readonly property int edge:     6      // gaps_out: windows to the screen edges and the bar
     readonly property int radius:   4      // radius-md = Hyprland rounding
     readonly property int radiusSm: 2      // key caps, rows, workspace marks
 }

@@ -292,7 +292,7 @@ Scope {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         exclusionMode: ExclusionMode.Ignore
         anchors { bottom: true; left: true }
-        margins { bottom: Theme.pill + 10 + Theme.gap; left: Theme.pad }
+        margins { bottom: Theme.bar + Theme.edge; left: Theme.edge }
         implicitWidth: 560
         implicitHeight: card.implicitHeight + 40
         color: "transparent"
