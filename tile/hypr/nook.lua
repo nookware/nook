@@ -67,8 +67,8 @@ end
 hl.env("XDG_MENU_PREFIX", "plasma-")
 
 hl.env("XCURSOR_THEME", "Nook-Neon")      -- glowing pixel cursors (shared/cursors/pixelcursors.py --all)
-hl.env("XCURSOR_SIZE", "20")
-hl.env("HYPRCURSOR_SIZE", "20")
+hl.env("XCURSOR_SIZE", "16")
+hl.env("HYPRCURSOR_SIZE", "16")
 -- Qt apps: qt6ct (the KDE-aware build) with the NookRamen colour scheme, Breeze style, Nook icons.
 -- Only this session reads ~/.config/qt6ct, so Plasma keeps its pastel Nook scheme.
 -- Plain qt6ct (Ubuntu) only hands over a QPalette, which Kirigami apps (Discover, System Settings)

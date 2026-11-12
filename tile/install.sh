@@ -201,7 +201,7 @@ if on look; then
 # ── old-school pixel cursors (generated, no extra packages) ──
 step "cursor"
 python3 -I "$REPO/shared/cursors/pixelcursors.py" --all --palette="$palette" "$XDG_DATA_HOME/icons" >/dev/null \
-  && ok "cursor themes Nook-Pixel, -Halo, -Neon, -Ember, -Dusk, -Sign (Neon is the default; try another: hyprctl setcursor Nook-Ember 20)"
+  && ok "cursor themes Nook-Pixel, -Halo, -Neon, -Ember, -Dusk, -Sign (Neon is the default; try another: hyprctl setcursor Nook-Ember 16)"
 
 # ── icons in this palette (shared/icons/build.sh), for Qt apps in this session ──
 "$REPO/shared/icons/build.sh" "$palette" || warn "Qt apps keep the default icons"
