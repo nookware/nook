@@ -195,8 +195,8 @@ NAMES = {
                     "size_bdiag", "fd_double_arrow", "fcf1c3c7cd4491d801f1e1c78f100000"],
 }
 
-# nominal size → integer pixel scale (hard edges)
-SIZES = {16: 1, 24: 2, 32: 2, 48: 3, 64: 4, 96: 6}
+# nominal size → pixel scale (hard edges)
+SIZES = {16: 1, 20: 1.5, 24: 2, 32: 2, 48: 3, 64: 4, 96: 6}     # 1.5: nearest pixel, still hard-edged
 
 
 def rgb(h):
@@ -289,12 +289,13 @@ def render(grid, kind, hot, s, st):
     glow = st["glow"]
     pad = 0 if not glow else int(glow[0] * s * 2.2) + 1
     gh, gw = len(grid), len(grid[0])
-    W, H = gw * s + 2 * pad, gh * s + 2 * pad
+    sw, sh = round(gw * s), round(gh * s)
+    W, H = sw + 2 * pad, sh + 2 * pad
     sharp = [None] * (W * H)
-    for y in range(gh * s):
-        row = grid[y // s]
-        for x in range(gw * s):
-            sharp[(y + pad) * W + x + pad] = row[x // s]
+    for y in range(sh):
+        row = grid[int(y / s)]
+        for x in range(sw):
+            sharp[(y + pad) * W + x + pad] = row[int(x / s)]
     out = []
     if glow:
         radius, gain, tint = glow
@@ -309,9 +310,9 @@ def render(grid, kind, hot, s, st):
                 elif st["body"] != grid[y][x] or k == "accent" or k != "body" or sum(st["body"]) > 200:
                     lit[y][x] = grid[y][x]
         ca, cr, cg, cb = ([0.0] * (W * H) for _ in range(4))
-        for y in range(gh * s):
-            for x in range(gw * s):
-                v = lit[y // s][x // s]
+        for y in range(sh):
+            for x in range(sw):
+                v = lit[int(y / s)][int(x / s)]
                 if v:
                     i = (y + pad) * W + x + pad
                     ca[i], cr[i], cg[i], cb[i] = 1.0, v[0] / 255, v[1] / 255, v[2] / 255
@@ -327,7 +328,7 @@ def render(grid, kind, hot, s, st):
             out.append(round(a * 255) << 24 | px[0] << 16 | px[1] << 8 | px[2])
         else:
             out.append(0)
-    return W, H, hot[0] * s + s // 2 + pad, hot[1] * s + s // 2 + pad, out
+    return W, H, int((hot[0] + 0.5) * s) + pad, int((hot[1] + 0.5) * s) + pad, out
 
 
 def xcursor(images):
@@ -366,7 +367,7 @@ def write_theme(dest, name, st, sizes=SIZES):
 def sheet(path, sts, scale=3):
     """a preview PNG: one row per style, every shape, on dark and light ground (needs ImageMagick)."""
     import subprocess
-    cell, rows = 26 * scale + 40, []
+    cell, rows = int(26 * scale) + 40, []
     W = cell * len(SHAPES)
     for name, st in sts.items():
         for ground in ((13, 13, 13), (232, 232, 232)):
