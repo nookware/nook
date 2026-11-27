@@ -151,11 +151,35 @@ Scope {
     function wifiFailed(net, ssid, open, reason) {
         if (reason === undefined || reason === failReason.None || reason === failReason.Unknown || net.connected) return;
         root.netError = ssid + ": " + failReason.toString(reason).toLowerCase();
-        if (reason === failReason.NoSecrets && !open) root.pskFor = net.name;
+        if (reason === failReason.NoSecrets && !open && !root.enterprise(net)) root.pskFor = net.name;
+    }
+    // Profiles saved under Plasma keep their password in KWallet (psk-flags 1, "agent-owned").
+    // Outside Plasma no secret agent hands it over, so NM fails with no-secrets and drops the
+    // password typed here again. Setting psk-flags 0 first lets NM store it itself (root-only
+    // file in /etc/NetworkManager), which works in every session.
+    property var pskNet: null
+    property string pskValue: ""
+    Process {
+        id: pskOwner
+        command: ["sh", "-c", "nmcli -g UUID,TYPE connection show | while IFS=: read -r u t; do "
+                  + "[ \"$t\" = 802-11-wireless ] && [ \"$(nmcli -g 802-11-wireless.ssid connection show \"$u\")\" = \"$1\" ] "
+                  + "&& nmcli connection modify \"$u\" 802-11-wireless-security.psk-flags 0; done; exit 0", "sh", root.pskNet?.name ?? ""]
+        onExited: {
+            if (root.pskNet) root.pskNet.connectWithPsk(root.pskValue);
+            root.pskNet = null;
+            root.pskValue = "";
+        }
     }
     function joinWithPsk(net, psk) {
-        if (typeof net.connectWithPsk === "function") net.connectWithPsk(psk);
-        else root.nmcli(["device", "wifi", "connect", net.name, "password", psk]);
+        if (typeof net.connectWithPsk !== "function") { root.nmcli(["device", "wifi", "connect", net.name, "password", psk]); return; }
+        root.pskNet = net;
+        root.pskValue = psk;
+        pskOwner.running = true;
+    }
+    // 802.1X (enterprise) needs a user, a password and often a CA certificate: a psk field can't do it
+    function enterprise(net) {
+        return [WifiSecurityType.Wpa2Eap, WifiSecurityType.WpaEap, WifiSecurityType.Wpa3SuiteB192,
+                WifiSecurityType.DynamicWep, WifiSecurityType.Leap].includes(net.security);
     }
     function netSettings() {
         Ui.controlOpen = false;
@@ -868,6 +892,7 @@ Scope {
                                         root.netError = "";
                                         if (wrow.modelData.connected) wrow.modelData.disconnect();
                                         else if (wrow.modelData.known || wrow.open) wrow.modelData.connect();
+                                        else if (root.enterprise(wrow.modelData)) root.netSettings();
                                         else { root.pskText = ""; root.pskFor = wrow.asking ? "" : wrow.modelData.name; }
                                     }
                                     onActionClicked: { if (root.confirm("wifi:" + wrow.ssid)) wrow.modelData.forget() }
