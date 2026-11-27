@@ -44,6 +44,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("command -v clipman >/dev/null && exec wl-paste -t text --watch clipman store")
 end)
 
+-- a screen plugged in that machine.lua doesn't know (a beamer) opens the screen picker;
+-- unplugging one goes back to the machine.lua layout if screens were mirrored or off (bin/nook-display)
+hl.on("monitor.added", function() hl.exec_cmd("nook-display plugged") end)
+hl.on("monitor.removed", function() hl.exec_cmd("nook-display unplugged") end)
+
 hl.on("hyprland.shutdown", function()
     hl.exec_cmd("systemctl --user stop hyprland-session.target")
 end)
@@ -385,7 +390,7 @@ bind(M("slash"), hl.dsp.exec_cmd("qs -c nook ipc call cheatsheet peek"),        
 bind(MS("R"),    hl.dsp.exec_cmd("pkill -x kded6; pkill -x qs; sleep 0.3; { nook-autostart restart & }; exec nook-shell"), "system: reload shell")
 bind(MS("E"),    hl.dsp.exit(),                                                    "system: exit hyprland")
 bind(M("G"),     hl.dsp.exec_cmd("nook-gamemode"),                                 "system: game mode on / off")
-bind(MS("P"),    hl.dsp.exec_cmd("nook-display"),                                  "system: screens extend ⇄ duplicate")
+bind(MS("P"),    hl.dsp.exec_cmd("qs -c nook ipc call screens open || nook-display"), "system: screens · duplicate, extend, only one")
 
 -- media keys (no description: not on the cheatsheet)
 local L = { locked = true, repeating = true }

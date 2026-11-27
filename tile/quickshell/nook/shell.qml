@@ -11,4 +11,5 @@ ShellRoot {
     Bar {}
     Launcher {}
     ControlCenter {}
+    Screens {}
 }

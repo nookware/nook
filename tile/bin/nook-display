@@ -5,7 +5,11 @@
 #                           resolution they share (so a small beamer gets a native picture)
 #   nook-display duplicate 1280x720   the same at a resolution you pick
 #   nook-display extend     back to the layout in ~/.config/hypr/machine.lua
-#   nook-display only       only the focused screen, the others off
+#   nook-display only [OUT] only the focused screen (or OUT, e.g. the beamer), the others off
+#   nook-display plugged    Hyprland runs this when a screen appears: a screen machine.lua doesn't
+#                           know (a beamer, a TV) opens the picker (qs ipc: screens offer OUT)
+#   nook-display unplugged  … and this when one goes: back to extend if screens were mirrored or
+#                           off, so pulling the beamer's cable never leaves you without a picture
 # Extend is just a config reload, so machine.lua stays the single source of the layout.
 set -euo pipefail
 
@@ -24,9 +28,24 @@ fi
 
 src=$(hyprctl monitors -j | jq -r '(map(select(.focused)) + .)[0].name')
 
+# screens already offered this session, so re-enabling one (extend after "only") doesn't ask again
+seen=${XDG_RUNTIME_DIR:-/tmp}/nook-display.offered
+# exists while the screens are not in the machine.lua layout (duplicate or only)
+changed=${XDG_RUNTIME_DIR:-/tmp}/nook-display.changed
+machine=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/machine.lua
+# screens with no rule of their own in machine.lua (by port name or desc:), one name per line
+unknown() {
+  mons | jq -r '.[] | "\(.name)\t\(.description)"' | while IFS=$'\t' read -r name desc; do
+    grep -qF "output = \"$name\"" "$machine" 2>/dev/null && continue
+    [ -n "$desc" ] && grep -qF "output = \"desc:$desc\"" "$machine" 2>/dev/null && continue
+    echo "$name"
+  done
+}
+
 case $mode in
   extend)
     hyprctl reload >/dev/null
+    rm -f "$changed"
     notify "[~] extend" "screens side by side again"
     ;;
   duplicate|mirror)
@@ -56,16 +75,44 @@ case $mode in
     done < <(mons | jq -r --arg s "$src" '.[] | select(.name != $s) | .name')
     [[ $lua == *mirror* ]] || { notify "[!] duplicate" "only one screen connected"; exit 0; }
     hyprctl eval "$lua" >/dev/null
+    echo duplicate >"$changed"
     notify "[OK] duplicate ${res:-}" "all screens show $src · SUPER ⇧ P again to extend"
     ;;
   only)
+    if [ -n "${2:-}" ]; then
+      mons | jq -e --arg o "$2" 'any(.[]; .name == $o)' >/dev/null || { echo "no screen $2" >&2; exit 1; }
+      src=$2
+      # switch it on first, in case an earlier "only" switched it off
+      mons | jq -e --arg o "$src" 'any(.[]; .name == $o and .disabled)' >/dev/null && { hyprctl reload >/dev/null; sleep 0.5; }
+    fi
     lua=""
     while read -r out; do
       lua+="hl.monitor({ output = \"$out\", disabled = true })
 "
     done < <(mons | jq -r --arg s "$src" '.[] | select(.name != $s) | .name')
     [ -n "$lua" ] && hyprctl eval "$lua" >/dev/null
+    echo only >"$changed"
     notify "[OK] $src only" "the other screens are off · SUPER ⇧ P to extend"
     ;;
-  *) echo "usage: nook-display [toggle|duplicate [WxH]|extend|only]" >&2; exit 2 ;;
+  plugged)
+    touch "$seen"
+    sleep 0.3   # let Hyprland finish setting the screen up
+    for out in $(unknown); do
+      grep -qxF "$out" "$seen" && continue
+      echo "$out" >>"$seen"
+      qs -c nook ipc call screens offer "$out" >/dev/null 2>&1 || notify "[+] new screen $out" "SUPER ⇧ P: duplicate, extend or only one"
+    done
+    ;;
+  unplugged)
+    present=$(mons | jq -r '.[].name')
+    # forget screens that are gone, so plugging them in again asks again
+    [ -f "$seen" ] && { grep -xF -f <(echo "$present") "$seen" >"$seen.new" || true; mv "$seen.new" "$seen"; }
+    if [ -f "$changed" ] || mons | jq -e 'any(.[]; .mirrorOf != "none" or .disabled) or (map(select(.disabled | not)) | length == 0)' >/dev/null; then
+      hyprctl reload >/dev/null
+      rm -f "$changed"
+      notify "[~] extend" "a screen was unplugged · back to the normal layout"
+    fi
+    qs -c nook ipc call screens gone >/dev/null 2>&1 || true
+    ;;
+  *) echo "usage: nook-display [toggle|duplicate [WxH]|extend|only [OUTPUT]|plugged|unplugged]" >&2; exit 2 ;;
 esac
